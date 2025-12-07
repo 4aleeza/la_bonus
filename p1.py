@@ -1,42 +1,121 @@
+def print_matrix(mat, msg=""):
+    if msg:
+        print("\n" + msg)
+    for row in mat:
+        print([round(x,3) for x in row])
+    print()
+
+
+# --------------------------------------------------
+# INPUT
+# --------------------------------------------------
 print("Gauss Elimination Calculator!\n")
 
 max_col = int(input("Enter Maximum Degree Of The Equations: \n"))
 max_row = int(input("Enter The Number Of Equations:\n"))
 
-##i have initialized matrix with 0s
-
-matrix = [[0.0 for i in range(max_col)] for i in range(max_row)]
+matrix = [[0.0 for _ in range(max_col)] for _ in range(max_row)]
 
 for i in range(max_row):
     for j in range(max_col):
-        coeff = input(f"Enter Coefficient Of x{j}: ")
-        matrix[i][j] = float(coeff)
+        matrix[i][j] = float(input(f"Enter Coefficient Of x{j}: "))
 
+print_matrix(matrix, "Initial Matrix:")
 
-print("Matrix: \n")
-for mat in matrix:
-    print(mat)
-
+# --------------------------------------------------
+# GAUSS–JORDAN ELIMINATION
+# --------------------------------------------------
 pivot_row = 0
 
-for pivot_col in range(max_col-1): #cuz last column is right hand side in augmented matrix
+for pivot_col in range(max_col - 1):
 
-#finding non zero entry
+    # find pivot
     pivot = None
     for row in range(pivot_row, max_row):
         if matrix[row][pivot_col] != 0:
             pivot = row
             break
 
-    #if full zero
     if pivot is None:
         continue
 
-    #swapping pivot row into right position
+    # swap
     matrix[pivot_row], matrix[pivot] = matrix[pivot], matrix[pivot_row]
+    print_matrix(matrix, f"Swapped row {pivot} with row {pivot_row}")
 
-    #making pivot =1
-    pivot_val = matrix[pivot_row][pivot_col] #assigning the pivot to a variable
-    matrix[pivot_row] = [x/pivot_val for x in matrix[pivot_row]] #performin matrix operating on the whole row to make the pivot 1
+    # make pivot = 1
+    pivot_val = matrix[pivot_row][pivot_col]
+    matrix[pivot_row] = [x / pivot_val for x in matrix[pivot_row]]
+    print_matrix(matrix, f"Made pivot 1 at row {pivot_row}")
 
-    
+    # eliminate other rows
+    for r in range(max_row):
+        if r == pivot_row:
+            continue
+        factor = matrix[r][pivot_col]
+        matrix[r] = [
+            matrix[r][c] - factor * matrix[pivot_row][c]
+            for c in range(max_col)
+        ]
+
+    print_matrix(matrix, f"Eliminated column {pivot_col}")
+
+    pivot_row += 1
+
+
+# --------------------------------------------------
+# CLASSIFY SOLUTION TYPE
+# --------------------------------------------------
+# Check for NO SOLUTION
+for row in matrix:
+    if all(abs(x) < 1e-9 for x in row[:-1]) and abs(row[-1]) > 1e-9:
+        print("NO SOLUTION (Inconsistent System)")
+        exit()
+
+
+# compute rank
+rank = sum(any(abs(x) > 1e-9 for x in row[:-1]) for row in matrix)
+vars = max_col - 1
+
+
+# --------------------------------------------------
+# UNIQUE SOLUTION
+# --------------------------------------------------
+if rank == vars:
+    print("UNIQUE SOLUTION:")
+    for i in range(vars):
+        print(f"x{i} =", round(matrix[i][-1],3))
+    exit()
+
+
+# --------------------------------------------------
+# INFINITE SOLUTIONS
+# --------------------------------------------------
+print("INFINITE SOLUTIONS (Dependent System)\n")
+
+# find pivot columns
+pivot_cols = []
+for r in range(max_row):
+    for c in range(vars):
+        if abs(matrix[r][c] - 1) < 1e-9 and all(abs(matrix[r][k])<1e-9 for k in range(c)):
+            pivot_cols.append(c)
+
+free = [i for i in range(vars) if i not in pivot_cols]
+
+print("Free variables:", free)
+
+for r in range(max_row):
+    # find pivot in row
+    pivot = None
+    for c in range(vars):
+        if abs(matrix[r][c]-1) < 1e-9:
+            pivot = c
+            break
+    if pivot is None:
+        continue
+
+    expr = f"x{pivot} = {round(matrix[r][-1],3)}"
+    for f in free:
+        if abs(matrix[r][f])>1e-9:
+            expr += f" - ({round(matrix[r][f],3)}) t{f}"
+    print(expr)
